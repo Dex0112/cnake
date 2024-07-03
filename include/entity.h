@@ -12,3 +12,5 @@ typedef struct {
 
 Entity *create_entity(SDL_Renderer *renderer, char *path, Vector position,
                       Vector size);
+
+void render_entity(SDL_Renderer *renderer, Entity *entity);

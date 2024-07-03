@@ -1,13 +1,24 @@
 #include "entity.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 Entity *create_entity(SDL_Renderer *renderer, char *path, Vector position,
                       Vector size) {
     // Use this instead to load textures
-    SDL_Texture *apple_texture = IMG_LoadTexture(renderer, path);
+    printf("Loading Texture\n");
+    SDL_Texture *texture = IMG_LoadTexture(renderer, path);
+    if (texture == NULL) {
+        printf("Texture not loaded!");
+    } 
 
-    return NULL;
+    Entity *entity = (Entity *) malloc(sizeof(Entity));
+    entity->position = position;
+    entity->size = size;
+    entity->texture = texture;
+
+    return entity; 
 }
 
 // Maybe make a function called like render_entities

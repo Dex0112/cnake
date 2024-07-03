@@ -1,4 +1,5 @@
 #include "entity.h"
+#include "game.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
@@ -26,21 +27,7 @@ int main() {
     SDL_Renderer *renderer =
         SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-    SDL_Event event;
-    bool running = true;
-
-    while (running) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = false;
-            }
-        }
-
-        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-        SDL_RenderClear(renderer);
-
-        SDL_RenderPresent(renderer);
-    }
+    game(renderer);
 
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
