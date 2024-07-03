@@ -8,13 +8,13 @@
 #include <stdio.h>
 
 #define VECTOR_UP                                                              \
-    (Vector) { 0, 1 }
+    (Vector) { 0, -1 }
 #define VECTOR_LEFT                                                            \
     (Vector) { -1, 0 }
 #define VECTOR_RIGHT                                                           \
     (Vector) { 1, 0 }
 #define VECTOR_DOWN                                                            \
-    (Vector) { 0, -1 }
+    (Vector) { 0, 1 }
 
 typedef struct node {
     Entity *self;
@@ -38,11 +38,16 @@ typedef struct {
 // Return scene state enum or scene trasition thing
 void game(SDL_Renderer *renderer) {
     Entity *snake = create_entity(renderer, "./gfx/Snake_Head.png",
-                                  (Vector){250, 250}, (Vector){100, 100});
+                                  (Vector){0, 0}, (Vector){20, 20});
 
     SDL_Event event;
     bool running = true;
+    Vector current_dir = VECTOR_UP;
 
+    int frame_count = 1;
+    int tick_speed = 10;
+
+    // Draw grid lines
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -54,27 +59,34 @@ void game(SDL_Renderer *renderer) {
         const Uint8 *state = SDL_GetKeyboardState(NULL);
 
         if (state[SDL_SCANCODE_LEFT]) {
-            snake->position.x -= 10;
+            current_dir = VECTOR_LEFT;
         }
 
         if (state[SDL_SCANCODE_RIGHT]) {
-            snake->position.x += 10;
+            current_dir = VECTOR_RIGHT;
         }
 
         if (state[SDL_SCANCODE_UP]) {
-            snake->position.y -= 10;
+            current_dir = VECTOR_UP;
         }
 
         if (state[SDL_SCANCODE_DOWN]) {
-            snake->position.y += 10;
+            current_dir = VECTOR_DOWN;
         }
 
-        SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
+        if (frame_count == 0) {
+            snake->position.x += current_dir.x * 24;
+            snake->position.y += current_dir.y * 24;
+        }
+
+        SDL_SetRenderDrawColor(renderer, 42, 42, 42, 255);
         SDL_RenderClear(renderer);
 
         render_entity(renderer, snake);
 
         SDL_RenderPresent(renderer);
+
+        frame_count = (frame_count + 1) % tick_speed;
 
         SDL_Delay(20);
     }
