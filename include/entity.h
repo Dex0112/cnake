@@ -7,6 +7,11 @@ typedef struct {
 typedef struct {
     Vector position;
     Vector size;
+    double angle;
+} Transform;
+
+typedef struct {
+    Transform transform;
     SDL_Texture *texture;
 } Entity;
 
