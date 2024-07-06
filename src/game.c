@@ -72,23 +72,40 @@ void render_game_state(GameState *game_state) {
 
         current = current->next;
     }
+
+    printf("Rendering Apple at (%d, %d)!\n",
+           game_state->apple->transform.position.x,
+           game_state->apple->transform.position.y);
+
+    render_entity(game_state->renderer, game_state->apple);
 }
 
 // Return scene state enum or scene trasition thing
 void game(SDL_Renderer *renderer) {
     // Window Width and Height 720
+
+    // This should only be called once so I need to put this in main or
+    // something
+    srandom(time(NULL));
+
     GameState game_state = {10,
                             10,
                             VECTOR_UP,
                             (SnakeNode *)malloc(sizeof(SnakeNode)),
                             create_entity(renderer, "./gfx/Apple.png",
-                                          (Vector){0, 0}, (Vector){1, 1}),
+                                          (Vector){0, 0}, (Vector){72, 72}),
                             renderer};
 
     game_state.snake_head->self = create_entity(
         renderer, "./gfx/Snake_Head.png", (Vector){36, 36}, (Vector){72, 72});
 
     game_state.snake_head->next = NULL;
+
+    // Maybe write a test for this
+    game_state.apple->transform.position.x =
+        random() % game_state.grid_width * 72 + 36;
+    game_state.apple->transform.position.y =
+        random() % game_state.grid_height * 72 + 36;
 
     SDL_Event event;
     bool running = true;
@@ -127,7 +144,7 @@ void game(SDL_Renderer *renderer) {
             tick(&game_state, current_dir);
         }
 
-        SDL_SetRenderDrawColor(renderer, 42, 42, 42, 255);
+        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
         SDL_RenderClear(renderer);
 
         // Render Game State
