@@ -41,11 +41,40 @@ typedef struct {
 // Append
 // tick
 
+int appends = 3;
+
+void append(SnakeNode *head, SDL_Renderer *renderer) {
+    SnakeNode *current = head;
+
+    while (current->next != NULL) {
+        current = current->next;
+    }
+
+    printf("Found the end of the snake\n");
+
+    SnakeNode *node = (SnakeNode *)malloc(sizeof(SnakeNode));
+    node->self =
+        create_entity(renderer, "./gfx/Snake_Body.png",
+                      current->self->transform.position, (Vector){72, 72});
+
+    printf("Created Entity\n");
+
+    node->next = NULL;
+
+    current->next = node;
+}
+
 void tick(GameState *game_state, Vector input_dir) {
     // Check if the snake is going to collide with the apple
     // If it does
     // append to snake
     // place apple elsewhere
+
+    if (appends > 0) {
+        printf("Appending\n");
+        append(game_state->snake_head, game_state->renderer);
+        appends--;
+    }
 
     Vector prev_position = game_state->snake_head->self->transform.position;
     // Move snake head
@@ -59,6 +88,8 @@ void tick(GameState *game_state, Vector input_dir) {
 
         current->self->transform.position = prev_position;
         prev_position = current_position;
+
+        current = current->next;
     }
 }
 
@@ -72,10 +103,6 @@ void render_game_state(GameState *game_state) {
 
         current = current->next;
     }
-
-    printf("Rendering Apple at (%d, %d)!\n",
-           game_state->apple->transform.position.x,
-           game_state->apple->transform.position.y);
 
     render_entity(game_state->renderer, game_state->apple);
 }
@@ -96,11 +123,13 @@ void game(SDL_Renderer *renderer) {
                                           (Vector){0, 0}, (Vector){72, 72}),
                             renderer};
 
+    // Find a way to center the snake
     game_state.snake_head->self = create_entity(
         renderer, "./gfx/Snake_Head.png", (Vector){36, 36}, (Vector){72, 72});
 
     game_state.snake_head->next = NULL;
 
+    // Write a function to do this
     // Maybe write a test for this
     game_state.apple->transform.position.x =
         random() % game_state.grid_width * 72 + 36;
@@ -140,7 +169,6 @@ void game(SDL_Renderer *renderer) {
         }
 
         if (frame_count == 0) {
-            // Movement
             tick(&game_state, current_dir);
         }
 
