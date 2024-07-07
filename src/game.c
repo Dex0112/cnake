@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_timer.h>
@@ -19,6 +20,8 @@
     (Vector) { 1, 0 }
 #define VECTOR_DOWN \
     (Vector) { 0, 1 }
+#define VECTOR_ZERO \
+    (Vector) { 0, 0 }
 
 typedef struct node {
     Entity *self;
@@ -41,7 +44,12 @@ typedef struct {
 // Append
 // tick
 
-int appends = 3;
+void move_apple(GameState *game_state) {
+    game_state->apple->transform.position.x =
+        random() % game_state->grid_width * 72 + 36;
+    game_state->apple->transform.position.y =
+        random() % game_state->grid_height * 72 + 36;
+}
 
 void append(SnakeNode *head, SDL_Renderer *renderer) {
     SnakeNode *current = head;
@@ -70,17 +78,19 @@ void tick(GameState *game_state, Vector input_dir) {
     // append to snake
     // place apple elsewhere
 
-    if (appends > 0) {
-        printf("Appending\n");
-        append(game_state->snake_head, game_state->renderer);
-        appends--;
-    }
-
     Vector prev_position = game_state->snake_head->self->transform.position;
-    // Move snake head
 
     game_state->snake_head->self->transform.position.x += input_dir.x * 72;
     game_state->snake_head->self->transform.position.y += input_dir.y * 72;
+
+    if (game_state->snake_head->self->transform.position.x ==
+        game_state->apple->transform.position.x) {
+        if (game_state->snake_head->self->transform.position.y ==
+            game_state->apple->transform.position.y) {
+            move_apple(game_state);
+            append(game_state->snake_head, game_state->renderer);
+        }
+    }
 
     SnakeNode *current = game_state->snake_head->next;
     while (current != NULL) {
@@ -104,7 +114,9 @@ void render_game_state(GameState *game_state) {
         current = current->next;
     }
 
-    render_entity(game_state->renderer, game_state->apple);
+    if (game_state->apple) {
+        render_entity(game_state->renderer, game_state->apple);
+    }
 }
 
 // Return scene state enum or scene trasition thing
@@ -115,13 +127,9 @@ void game(SDL_Renderer *renderer) {
     // something
     srandom(time(NULL));
 
-    GameState game_state = {10,
-                            10,
-                            VECTOR_UP,
-                            (SnakeNode *)malloc(sizeof(SnakeNode)),
-                            create_entity(renderer, "./gfx/Apple.png",
-                                          (Vector){0, 0}, (Vector){72, 72}),
-                            renderer};
+    GameState game_state = {10,        10,
+                            VECTOR_UP, (SnakeNode *)malloc(sizeof(SnakeNode)),
+                            NULL,      renderer};
 
     // Find a way to center the snake
     game_state.snake_head->self = create_entity(
@@ -129,16 +137,9 @@ void game(SDL_Renderer *renderer) {
 
     game_state.snake_head->next = NULL;
 
-    // Write a function to do this
-    // Maybe write a test for this
-    game_state.apple->transform.position.x =
-        random() % game_state.grid_width * 72 + 36;
-    game_state.apple->transform.position.y =
-        random() % game_state.grid_height * 72 + 36;
-
     SDL_Event event;
     bool running = true;
-    Vector current_dir = VECTOR_UP;
+    Vector current_dir = VECTOR_ZERO;
 
     int frame_count = -1;
     int tick_speed = 25;
@@ -150,10 +151,6 @@ void game(SDL_Renderer *renderer) {
                 running = false;
                 printf("Quiting\n");
             } else if (event.type == SDL_KEYDOWN) {
-                if (frame_count < 0) {
-                    frame_count = 1;
-                }
-
                 // Parse input function?
                 // Like parse_input(input, &current_dir)
                 if (event.key.keysym.scancode == SDL_SCANCODE_LEFT) {
@@ -165,20 +162,35 @@ void game(SDL_Renderer *renderer) {
                 } else if (event.key.keysym.scancode == SDL_SCANCODE_DOWN) {
                     current_dir = VECTOR_DOWN;
                 }
+
+                if (frame_count < 0) {
+                    if (current_dir.x == VECTOR_ZERO.x &&
+                        current_dir.y == VECTOR_ZERO.y) {
+                        continue;
+                    }
+
+                    frame_count = 1;
+
+                    game_state.apple =
+                        create_entity(renderer, "./gfx/Apple.png",
+                                      (Vector){0, 0}, (Vector){72, 72});
+
+                    printf("Moving Apple\n");
+                    move_apple(&game_state);
+                }
             }
         }
 
-        if (frame_count == 0) {
-            tick(&game_state, current_dir);
+        if (frame_count <= 0) {
+            if (frame_count != -1) {
+                tick(&game_state, current_dir);
+            }
+            // Render Game State
+            SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+            SDL_RenderClear(renderer);
+            render_game_state(&game_state);
+            SDL_RenderPresent(renderer);
         }
-
-        SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-        SDL_RenderClear(renderer);
-
-        // Render Game State
-        render_game_state(&game_state);
-
-        SDL_RenderPresent(renderer);
 
         if (frame_count >= 0) {
             frame_count = (frame_count + 1) % tick_speed;
