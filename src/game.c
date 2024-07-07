@@ -44,13 +44,6 @@ typedef struct {
 // Append
 // tick
 
-void move_apple(GameState *game_state) {
-    game_state->apple->transform.position.x =
-        random() % game_state->grid_width * 72 + 36;
-    game_state->apple->transform.position.y =
-        random() % game_state->grid_height * 72 + 36;
-}
-
 void append(SnakeNode *head, SDL_Renderer *renderer) {
     SnakeNode *current = head;
 
@@ -72,12 +65,35 @@ void append(SnakeNode *head, SDL_Renderer *renderer) {
     current->next = node;
 }
 
-void tick(GameState *game_state, Vector input_dir) {
-    // Check if the snake is going to collide with the apple
-    // If it does
-    // append to snake
-    // place apple elsewhere
+bool collides_with_snake(SnakeNode *head, Vector position) {
+    SnakeNode *current = head;
 
+    while (current) {
+        if (current->self->transform.position.x == position.x) {
+            if (current->self->transform.position.y == position.y) {
+                return true;
+            }
+        }
+
+        current = current->next;
+    }
+
+    return false;
+}
+
+void move_apple(GameState *game_state) {
+    game_state->apple->transform.position.x =
+        random() % game_state->grid_width * 72 + 36;
+    game_state->apple->transform.position.y =
+        random() % game_state->grid_height * 72 + 36;
+
+    if (collides_with_snake(game_state->snake_head,
+                            game_state->apple->transform.position)) {
+        move_apple(game_state);
+    }
+}
+
+void tick(GameState *game_state, Vector input_dir) {
     Vector prev_position = game_state->snake_head->self->transform.position;
 
     game_state->snake_head->self->transform.position.x += input_dir.x * 72;
@@ -93,6 +109,7 @@ void tick(GameState *game_state, Vector input_dir) {
     }
 
     SnakeNode *current = game_state->snake_head->next;
+
     while (current != NULL) {
         Vector current_position = current->self->transform.position;
 
@@ -184,6 +201,13 @@ void game(SDL_Renderer *renderer) {
         if (frame_count <= 0) {
             if (frame_count != -1) {
                 tick(&game_state, current_dir);
+
+                if (collides_with_snake(
+                        game_state.snake_head->next,
+                        game_state.snake_head->self->transform.position)) {
+                    printf("You lose!");
+                    frame_count = -1;
+                }
             }
             // Render Game State
             SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
