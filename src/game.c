@@ -99,11 +99,14 @@ void tick(GameState *game_state, Vector input_dir) {
     game_state->snake_head->self->transform.position.x += input_dir.x * 72;
     game_state->snake_head->self->transform.position.y += input_dir.y * 72;
 
+    bool apple_collected = false;
+
     if (game_state->snake_head->self->transform.position.x ==
-        game_state->apple->transform.position.x) {
+            game_state->apple->transform.position.x) {
         if (game_state->snake_head->self->transform.position.y ==
-            game_state->apple->transform.position.y) {
-            move_apple(game_state);
+                game_state->apple->transform.position.y) {
+            apple_collected = true;
+
             append(game_state->snake_head, game_state->renderer);
         }
     }
@@ -118,11 +121,19 @@ void tick(GameState *game_state, Vector input_dir) {
 
         current = current->next;
     }
+
+    if(apple_collected) {
+        move_apple(game_state);
+    }
 }
 
 void render_game_state(GameState *game_state) {
     // Maybe render grid lines
     // Render Snake
+
+    // When I refactor instead of storing the texture in each node just render
+    // the head as the snake head then loop through rendering the same body
+    // texture over and over again
     SnakeNode *current = game_state->snake_head;
 
     while (current != NULL) {
@@ -161,6 +172,12 @@ void game(SDL_Renderer *renderer) {
     int frame_count = -1;
     int tick_speed = 25;
 
+    // Render Game State
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+    SDL_RenderClear(renderer);
+    render_game_state(&game_state);
+    SDL_RenderPresent(renderer);
+
     // Draw grid lines
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -170,14 +187,28 @@ void game(SDL_Renderer *renderer) {
             } else if (event.type == SDL_KEYDOWN) {
                 // Parse input function?
                 // Like parse_input(input, &current_dir)
+                // Add edge detection/screen wrap
                 if (event.key.keysym.scancode == SDL_SCANCODE_LEFT) {
-                    current_dir = VECTOR_LEFT;
+                    if (current_dir.x != VECTOR_LEFT.x * -1 ||
+                        current_dir.y != VECTOR_LEFT.y * -1) {
+                        current_dir = VECTOR_LEFT;
+                    }
+
                 } else if (event.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
-                    current_dir = VECTOR_RIGHT;
+                    if (current_dir.x != VECTOR_RIGHT.x * -1 ||
+                        current_dir.y != VECTOR_RIGHT.y * -1) {
+                        current_dir = VECTOR_RIGHT;
+                    }
                 } else if (event.key.keysym.scancode == SDL_SCANCODE_UP) {
-                    current_dir = VECTOR_UP;
+                    if (current_dir.x != VECTOR_UP.x * -1 ||
+                        current_dir.y != VECTOR_UP.y * -1) {
+                        current_dir = VECTOR_UP;
+                    }
                 } else if (event.key.keysym.scancode == SDL_SCANCODE_DOWN) {
-                    current_dir = VECTOR_DOWN;
+                    if (current_dir.x != VECTOR_DOWN.x * -1 ||
+                        current_dir.y != VECTOR_DOWN.y * -1) {
+                        current_dir = VECTOR_DOWN;
+                    }
                 }
 
                 if (frame_count < 0) {
@@ -198,17 +229,18 @@ void game(SDL_Renderer *renderer) {
             }
         }
 
-        if (frame_count <= 0) {
-            if (frame_count != -1) {
-                tick(&game_state, current_dir);
+        if (frame_count == 0) {
+            tick(&game_state, current_dir);
 
-                if (collides_with_snake(
-                        game_state.snake_head->next,
-                        game_state.snake_head->self->transform.position)) {
-                    printf("You lose!");
-                    frame_count = -1;
-                }
+            if (collides_with_snake(
+                    game_state.snake_head->next,
+                    game_state.snake_head->self->transform.position)) {
+                printf("You lose!\n");
+                // game over flag?
+                // Handle everything better
+                frame_count = -1;
             }
+
             // Render Game State
             SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
             SDL_RenderClear(renderer);
