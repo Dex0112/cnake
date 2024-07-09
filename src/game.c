@@ -7,10 +7,9 @@
 #include <SDL2/SDL_timer.h>
 #include <stdbool.h>
 
-// I need a like constants.h for window dimensions
-
 // Do this first
 void move_apple(GameState *game_state);
 void render_game_state(GameState *game_state);
 
-void game(SDL_Renderer *renderer);
+void game(SDL_Renderer *renderer) {
+}

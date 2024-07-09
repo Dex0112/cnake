@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Iinclude -lSDL2 -lSDL2_image -lSDL2_ttf
+CFLAGS = -Iinclude -lSDL2 -lSDL2_image 
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin

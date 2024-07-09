@@ -4,21 +4,32 @@
 
 #include <SDL2/SDL.h>
 
+#define GRID_WIDTH 30
+#define GRID_WIDTH 30
+
 typedef struct {
-    // width
-    // height
-    // I really don't think having a struct for position is required but I think
-    // that maybe having a struct for apple with just x and y would be fine and
-    // simple apple || apple x & y snake head
-} GameState;
+    SDL_Texture *snake_head;
+    SDL_Texture *snake_body;
+    SDL_Texture *apple;
+} Resources;
 
 typedef struct node {
     struct node *next;
-    // x and y are more like indecies that will be converted to coordinates at
-    // rendering
     int x;
     int y;
 } SnakeNode;
+
+typedef struct {
+    int x; 
+    int y;
+} Apple;
+
+typedef struct {
+    unsigned int width;
+    unsigned int height;
+    SnakeNode *snake;
+    Apple apple;
+} GameState;
 
 void game(SDL_Renderer *renderer);
 #endif

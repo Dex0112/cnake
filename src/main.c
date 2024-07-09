@@ -1,16 +1,14 @@
-#include "entity.h"
+#include "constants.h"
 #include "game.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
+#include <SDL2/SDL_timer.h>
 #include <SDL2/SDL_video.h>
 #include <stdbool.h>
 #include <stdio.h>
-
-#define WINDOW_WIDTH 720
-#define WINDOW_HEIGHT 720
 
 int main() {
     SDL_Init(SDL_INIT_VIDEO);
