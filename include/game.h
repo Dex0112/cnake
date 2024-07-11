@@ -4,8 +4,11 @@
 
 #include <SDL2/SDL.h>
 
-#define GRID_WIDTH 30
-#define GRID_WIDTH 30
+#define GRID_WIDTH 10
+#define GRID_HEIGHT 10
+#define TICK_SPEED 25
+
+typedef enum { UP, LEFT, DOWN, RIGHT } Direction;
 
 typedef struct {
     SDL_Texture *snake_head;
@@ -20,7 +23,7 @@ typedef struct node {
 } SnakeNode;
 
 typedef struct {
-    int x; 
+    int x;
     int y;
 } Apple;
 
@@ -28,7 +31,8 @@ typedef struct {
     unsigned int width;
     unsigned int height;
     SnakeNode *snake;
-    Apple apple;
+    Apple *apple;
+    Direction direction;
 } GameState;
 
 void game(SDL_Renderer *renderer);

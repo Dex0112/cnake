@@ -1,5 +1,3 @@
-#include "constants.h"
-#include "game.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
@@ -9,9 +7,16 @@
 #include <SDL2/SDL_video.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include "constants.h"
+#include "game.h"
 
 int main() {
     SDL_Init(SDL_INIT_VIDEO);
+
+    srandom(time(NULL));
 
     if (IMG_Init(IMG_INIT_PNG) == 0) {
         printf("IMG_Init: %s\n", IMG_GetError());
