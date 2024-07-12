@@ -13,7 +13,7 @@
 
 #include "constants.h"
 
-// Do this first
+bool is_in_bounds(int x, int y, GameState game_state);
 bool collides_with_snake(int x, int y, SnakeNode *head);
 
 void tick(GameState *);
@@ -97,19 +97,36 @@ void game(SDL_Renderer *renderer) {
     free_game_state(game_state);
 }
 
+bool is_in_bounds(int x, int y, GameState game_state) {
+    if (x < 0) {
+        return false;
+    }
+
+    if (y < 0) {
+        return false;
+    }
+
+    if (x >= game_state.width) {
+        return false;
+    }
+
+    if (y >= game_state.height) {
+        return false;
+    }
+
+    return true;
+}
+
 bool collides_with_snake(int x, int y, SnakeNode *head) {
     SnakeNode *current = head;
 
     while (current) {
         if (x == current->x && y == current->y) {
             return true;
-            printf("Collision detected: %d %d\n", x, y);
         }
 
         current = current->next;
     }
-
-    printf("No collision detected %d %d\n", x, y);
 
     return false;
 }
