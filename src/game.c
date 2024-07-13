@@ -13,6 +13,7 @@
 
 #include "constants.h"
 
+bool is_game_over(GameState game_state);
 bool is_in_bounds(int x, int y, GameState game_state);
 bool collides_with_snake(int x, int y, SnakeNode *head);
 
@@ -54,16 +55,17 @@ void game(SDL_Renderer *renderer) {
 
     move_apple(&game_state);
 
-    int frame_count = 0;
-    bool running = true;
-    SDL_Event event;
-
     SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
     SDL_RenderClear(renderer);
 
     render_game_state(game_state, resources, renderer);
 
     SDL_RenderPresent(renderer);
+
+    int frame_count = 0;
+    bool running = true;
+    bool game_over = false;
+    SDL_Event event;
 
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -80,7 +82,17 @@ void game(SDL_Renderer *renderer) {
         if (frame_count >= TICK_SPEED) {
             frame_count = 0;
 
-            tick(&game_state);
+            if (!game_over) {
+                game_over = is_game_over(game_state);
+
+                if (!game_over) {
+                    tick(&game_state);
+                }
+            }
+
+            if (game_over) {
+                // Render game over screen
+            }
 
             SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
             SDL_RenderClear(renderer);
@@ -91,10 +103,27 @@ void game(SDL_Renderer *renderer) {
         }
 
         frame_count++;
-        SDL_Delay(20);
+        SDL_Delay(10);
     }
 
     free_game_state(game_state);
+}
+
+// render_end_screen(*endscreen)
+// create endscreen if it is null
+
+bool is_game_over(GameState game_state) {
+    SnakeNode *head = game_state.snake;
+
+    if (!is_in_bounds(head->x, head->y, game_state)) {
+        return true;
+    }
+
+    if (collides_with_snake(head->x, head->y, head->next)) {
+        return true;
+    }
+
+    return false;
 }
 
 bool is_in_bounds(int x, int y, GameState game_state) {
