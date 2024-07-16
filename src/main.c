@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_rect.h>
@@ -14,6 +15,8 @@
 #include "game.h"
 
 int main() {
+    TTF_Init();
+
     SDL_Init(SDL_INIT_VIDEO);
 
     srandom(time(NULL));
@@ -34,5 +37,7 @@ int main() {
 
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
+    TTF_Quit();
+
     SDL_Quit();
 }

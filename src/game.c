@@ -6,12 +6,16 @@
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_scancode.h>
+#include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_timer.h>
+#include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "button.h"
 #include "constants.h"
+#include "font.h"
 
 bool is_game_over(GameState game_state);
 bool is_in_bounds(int x, int y, GameState game_state);
@@ -24,6 +28,7 @@ void append(SnakeNode *head);
 void handle_input(GameState *, SDL_Scancode);
 
 void render_game_state(GameState, Resources, SDL_Renderer *);
+void render_end_screen(SDL_Renderer *renderer, EndScreen **end_screen);
 
 void free_game_state(GameState);
 
@@ -46,9 +51,6 @@ void game(SDL_Renderer *renderer) {
     game_state.snake->y = game_state.height / 2;
     game_state.snake->next = NULL;
 
-    // Don't render apple before input
-    // game_state.apple = NULL;
-
     game_state.apple = (Apple *)malloc(sizeof(Apple));
     game_state.apple->x = 0;
     game_state.apple->y = 0;
@@ -62,10 +64,14 @@ void game(SDL_Renderer *renderer) {
 
     SDL_RenderPresent(renderer);
 
+    EndScreen *end_screen = NULL;
+
     int frame_count = 0;
     bool running = true;
     bool game_over = false;
     SDL_Event event;
+
+    // add a wait for input function here
 
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -83,15 +89,13 @@ void game(SDL_Renderer *renderer) {
             frame_count = 0;
 
             if (!game_over) {
-                game_over = is_game_over(game_state);
-
-                if (!game_over) {
-                    tick(&game_state);
-                }
+                tick(&game_state);
             }
 
+            game_over = is_game_over(game_state);
+
             if (game_over) {
-                // Render game over screen
+                render_end_screen(renderer, &end_screen);
             }
 
             SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
@@ -108,9 +112,6 @@ void game(SDL_Renderer *renderer) {
 
     free_game_state(game_state);
 }
-
-// render_end_screen(*endscreen)
-// create endscreen if it is null
 
 bool is_game_over(GameState game_state) {
     SnakeNode *head = game_state.snake;
@@ -284,7 +285,6 @@ void render_game_state(GameState game_state, Resources resources,
         current = current->next;
     }
 
-    // Render Apple
     if (game_state.apple == NULL) {
         return;
     }
@@ -297,6 +297,34 @@ void render_game_state(GameState game_state, Resources resources,
     };
 
     SDL_RenderCopy(renderer, resources.apple, NULL, &apple_rect);
+}
+
+void render_end_screen(SDL_Renderer *renderer, EndScreen **end_screen) {
+    // remove this responsbility from this function?
+    if (*end_screen == NULL) {
+        *end_screen = (EndScreen *)malloc(sizeof(EndScreen));
+
+        (*end_screen)->restart_button = create_button(
+            renderer, "Restart",
+            (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 50, 50});
+
+        (*end_screen)->quit_button = create_button(
+            renderer, "Quit",
+            (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 25, 40, 40});
+
+        SDL_QueryTexture((*end_screen)->score_text, NULL, NULL,
+                         &(*end_screen)->score_rect.w,
+                         &(*end_screen)->score_rect.h);
+
+        (*end_screen)->score_rect.x = WINDOW_WIDTH / 2;
+        (*end_screen)->score_rect.y = WINDOW_HEIGHT / 2 - 50;
+    }
+
+    // Actually render the screen
+    SDL_Rect score_text;
+
+    SDL_QueryTexture((*end_screen)->score_text, NULL, NULL, &score_text.w,
+                     &score_text.h);
 }
 
 void handle_input(GameState *game_state, SDL_Scancode key) {

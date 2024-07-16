@@ -3,12 +3,24 @@
 #define GAME
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_rect.h>
+#include <SDL2/SDL_render.h>
+
+#include "button.h"
 
 #define GRID_WIDTH 10
 #define GRID_HEIGHT 10
 #define TICK_SPEED 25
 
 typedef enum { UP, LEFT, DOWN, RIGHT } Direction;
+
+typedef struct {
+    Button *restart_button;
+    Button *quit_button;
+    SDL_Rect score_rect;
+    SDL_Texture *score_text;
+    SDL_Rect background;
+} EndScreen;
 
 typedef struct {
     SDL_Texture *snake_head;
