@@ -27,10 +27,13 @@ void append(SnakeNode *head);
 
 void handle_input(GameState *, SDL_Scancode);
 
+EndScreen *create_end_screen(SDL_Renderer *, GameState);
+
 void render_game_state(GameState, Resources, SDL_Renderer *);
-void render_end_screen(SDL_Renderer *renderer, EndScreen **end_screen);
+void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen);
 
 void free_game_state(GameState);
+void free_end_screen(EndScreen *end_screen);
 
 void game(SDL_Renderer *renderer) {
     Resources resources = {
@@ -45,6 +48,7 @@ void game(SDL_Renderer *renderer) {
         (SnakeNode *)malloc(sizeof(SnakeNode)),
         (Apple *)malloc(sizeof(Apple)),
         UP,
+        0,
     };
 
     game_state.snake->x = game_state.width / 2;
@@ -94,14 +98,18 @@ void game(SDL_Renderer *renderer) {
 
             game_over = is_game_over(game_state);
 
-            if (game_over) {
-                render_end_screen(renderer, &end_screen);
-            }
-
             SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
             SDL_RenderClear(renderer);
 
             render_game_state(game_state, resources, renderer);
+
+            if (game_over) {
+                if (end_screen == NULL) {
+                    end_screen = create_end_screen(renderer, game_state);
+                }
+
+                render_end_screen(renderer, *end_screen);
+            }
 
             SDL_RenderPresent(renderer);
         }
@@ -111,6 +119,7 @@ void game(SDL_Renderer *renderer) {
     }
 
     free_game_state(game_state);
+    free_end_screen(end_screen);
 }
 
 bool is_game_over(GameState game_state) {
@@ -299,32 +308,15 @@ void render_game_state(GameState game_state, Resources resources,
     SDL_RenderCopy(renderer, resources.apple, NULL, &apple_rect);
 }
 
-void render_end_screen(SDL_Renderer *renderer, EndScreen **end_screen) {
-    // remove this responsbility from this function?
-    if (*end_screen == NULL) {
-        *end_screen = (EndScreen *)malloc(sizeof(EndScreen));
+void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen) {
+    SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
+    SDL_RenderFillRect(renderer, &end_screen.background);
 
-        (*end_screen)->restart_button = create_button(
-            renderer, "Restart",
-            (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 50, 50});
+    SDL_RenderCopy(renderer, end_screen.score_text, NULL,
+                   &end_screen.score_rect);
 
-        (*end_screen)->quit_button = create_button(
-            renderer, "Quit",
-            (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 25, 40, 40});
-
-        SDL_QueryTexture((*end_screen)->score_text, NULL, NULL,
-                         &(*end_screen)->score_rect.w,
-                         &(*end_screen)->score_rect.h);
-
-        (*end_screen)->score_rect.x = WINDOW_WIDTH / 2;
-        (*end_screen)->score_rect.y = WINDOW_HEIGHT / 2 - 50;
-    }
-
-    // Actually render the screen
-    SDL_Rect score_text;
-
-    SDL_QueryTexture((*end_screen)->score_text, NULL, NULL, &score_text.w,
-                     &score_text.h);
+    render_button(renderer, *end_screen.restart_button);
+    render_button(renderer, *end_screen.quit_button);
 }
 
 void handle_input(GameState *game_state, SDL_Scancode key) {
@@ -362,6 +354,46 @@ void handle_input(GameState *game_state, SDL_Scancode key) {
     }
 }
 
+EndScreen *create_end_screen(SDL_Renderer *renderer, GameState game_state) {
+    EndScreen *end_screen = (EndScreen *)malloc(sizeof(EndScreen));
+
+    char score_result[25];
+
+    sprintf(score_result, "Score: %d", game_state.score);
+
+    end_screen->background = (SDL_Rect){
+        WINDOW_WIDTH / 2,
+        WINDOW_HEIGHT / 2,
+        WINDOW_WIDTH * 0.75,
+        WINDOW_HEIGHT * 0.75,
+    };
+
+    end_screen->background.x -= end_screen->background.w / 2;
+    end_screen->background.y -= end_screen->background.h / 2;
+
+    end_screen->restart_button =
+        create_button(renderer, "Restart",
+                      (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 100, 60});
+
+    end_screen->quit_button = create_button(
+        renderer, "Quit",
+        (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 75, 75, 60});
+
+    end_screen->score_text =
+        load_text(renderer, score_result, font_large, font_color_large);
+
+    SDL_QueryTexture(end_screen->score_text, NULL, NULL,
+                     &(end_screen->score_rect.w), &(end_screen->score_rect.h));
+
+    end_screen->score_rect.x = WINDOW_WIDTH / 2;
+    end_screen->score_rect.x -= end_screen->score_rect.w / 2;
+
+    end_screen->score_rect.y = WINDOW_HEIGHT / 2 - 75;
+    end_screen->score_rect.y -= end_screen->score_rect.h / 2;
+
+    return end_screen;
+}
+
 void free_game_state(GameState game_state) {
     SnakeNode *current = game_state.snake;
 
@@ -374,4 +406,15 @@ void free_game_state(GameState game_state) {
     }
 
     free(game_state.apple);
+}
+
+void free_end_screen(EndScreen *end_screen) {
+    if (end_screen == NULL) return;
+
+    SDL_DestroyTexture(end_screen->score_text);
+
+    free_button(end_screen->restart_button);
+    free_button(end_screen->quit_button);
+
+    free(end_screen);
 }

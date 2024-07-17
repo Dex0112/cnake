@@ -13,6 +13,7 @@
 
 #include "constants.h"
 #include "game.h"
+#include "font.h"
 
 int main() {
     TTF_Init();
@@ -33,10 +34,17 @@ int main() {
     SDL_Renderer *renderer =
         SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
+    load_font_regular("/usr/share/fonts/gnu-free/FreeSansBold.otf", 24);
+    load_font_large("/usr/share/fonts/gnu-free/FreeSansBold.otf", 40);
+
     game(renderer);
+
+    TTF_CloseFont(font_regular);
+    TTF_CloseFont(font_large);
 
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
+
     TTF_Quit();
 
     SDL_Quit();

@@ -45,6 +45,7 @@ typedef struct {
     SnakeNode *snake;
     Apple *apple;
     Direction direction;
+    unsigned int score;
 } GameState;
 
 void game(SDL_Renderer *renderer);
