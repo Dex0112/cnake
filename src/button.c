@@ -8,11 +8,22 @@
 
 SDL_Color button_color = {0, 0, 0, 0};
 
+bool collide_point(Button button, int x, int y) {
+    if (x < button.rect.x - button.rect.w / 2) return false;
+    if (y < button.rect.y - button.rect.h / 2) return false;
+
+    if (x > button.rect.x + button.rect.w / 2) return false;
+    if (y > button.rect.y + button.rect.h / 2) return false;
+
+    return true;
+}
+
 Button *create_button(SDL_Renderer *renderer, char *text,
                       SDL_Rect button_rect) {
     Button *button = (Button *)malloc(sizeof(Button));
 
-    button->text_texture = load_text(renderer, text, font_regular, font_color_regular);
+    button->text_texture =
+        load_text(renderer, text, font_regular, font_color_regular);
     button->rect = button_rect;
 
     return button;

@@ -3,6 +3,7 @@
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_mouse.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_scancode.h>
@@ -85,6 +86,25 @@ void game(SDL_Renderer *renderer) {
                     break;
                 case SDL_KEYDOWN:
                     handle_input(&game_state, event.key.keysym.scancode);
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    if (!game_over) break;
+
+                    int mouse_x, mouse_y;
+
+                    SDL_GetMouseState(&mouse_x, &mouse_y);
+
+                    if (collide_point(*end_screen->quit_button, mouse_x,
+                                      mouse_y)) {
+                        running = false;
+                    }
+
+                    if (collide_point(*end_screen->restart_button, mouse_x,
+                                      mouse_y)) {
+                        // Create a system for restarting
+                        printf("Restarting...\n");
+                    }
+
                     break;
             }
         }
