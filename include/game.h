@@ -10,7 +10,7 @@
 
 #define GRID_WIDTH 20
 #define GRID_HEIGHT 20
-#define TICK_SPEED 25
+#define TICK_SPEED 20
 
 typedef enum { UP, LEFT, DOWN, RIGHT } Direction;
 

@@ -26,7 +26,7 @@ void tick(GameState *);
 void move_apple(GameState *);
 void append(SnakeNode *head);
 
-void handle_input(GameState *, SDL_Scancode);
+Direction handle_input(GameState *, SDL_Scancode);
 
 EndScreen *create_end_screen(SDL_Renderer *, GameState);
 
@@ -48,6 +48,8 @@ bool game(SDL_Renderer *renderer) {
         GRID_WIDTH, GRID_HEIGHT, (SnakeNode *)malloc(sizeof(SnakeNode)),
         NULL,       UP,          0,
     };
+
+    Direction next_direction = game_state.direction;
 
     game_state.snake->x = game_state.width / 2 - 1;
     game_state.snake->y = game_state.height / 2 - 1;
@@ -88,7 +90,7 @@ bool game(SDL_Renderer *renderer) {
                     running = false;
                     break;
                 case SDL_KEYDOWN:
-                    handle_input(&game_state, event.key.keysym.scancode);
+                    next_direction = handle_input(&game_state, event.key.keysym.scancode);
 
                     if (frame_count == -1) {
                         frame_count = 0;
@@ -127,6 +129,7 @@ bool game(SDL_Renderer *renderer) {
             frame_count = 0;
 
             if (!game_over) {
+                game_state.direction = next_direction;
                 tick(&game_state);
             }
 
@@ -358,39 +361,45 @@ void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen) {
     render_button(renderer, *end_screen.quit_button);
 }
 
-void handle_input(GameState *game_state, SDL_Scancode key) {
+Direction handle_input(GameState *game_state, SDL_Scancode key) {
     switch (key) {
         case SDL_SCANCODE_UP:
             if (game_state->direction == DOWN) {
+                printf("Deny direction change\n");
                 break;
             }
 
-            game_state->direction = UP;
+            return UP;
             break;
         case SDL_SCANCODE_DOWN:
             if (game_state->direction == UP) {
+                printf("Deny direction change\n");
                 break;
             }
 
-            game_state->direction = DOWN;
+            return DOWN;
             break;
         case SDL_SCANCODE_LEFT:
             if (game_state->direction == RIGHT) {
+                printf("Deny direction change\n");
                 break;
             }
 
-            game_state->direction = LEFT;
+            return LEFT;
             break;
         case SDL_SCANCODE_RIGHT:
             if (game_state->direction == LEFT) {
+                printf("Deny direction change\n");
                 break;
             }
 
-            game_state->direction = RIGHT;
+            return RIGHT;
             break;
         default:
             break;
     }
+
+    return game_state->direction;
 }
 
 EndScreen *create_end_screen(SDL_Renderer *renderer, GameState game_state) {
