@@ -36,7 +36,7 @@ void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen);
 void free_game_state(GameState);
 void free_end_screen(EndScreen *end_screen);
 
-void game(SDL_Renderer *renderer) {
+bool game(SDL_Renderer *renderer) {
     Resources resources = {
         IMG_LoadTexture(renderer, "./gfx/Snake_Head.png"),
         IMG_LoadTexture(renderer, "./gfx/Snake_Body.png"),
@@ -44,23 +44,13 @@ void game(SDL_Renderer *renderer) {
     };
 
     GameState game_state = {
-        GRID_WIDTH,
-        GRID_HEIGHT,
-        (SnakeNode *)malloc(sizeof(SnakeNode)),
-        (Apple *)malloc(sizeof(Apple)),
-        UP,
-        0,
+        GRID_WIDTH, GRID_HEIGHT, (SnakeNode *)malloc(sizeof(SnakeNode)),
+        NULL,       UP,          0,
     };
 
     game_state.snake->x = game_state.width / 2;
     game_state.snake->y = game_state.height / 2;
     game_state.snake->next = NULL;
-
-    game_state.apple = (Apple *)malloc(sizeof(Apple));
-    game_state.apple->x = 0;
-    game_state.apple->y = 0;
-
-    move_apple(&game_state);
 
     SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
     SDL_RenderClear(renderer);
@@ -69,14 +59,22 @@ void game(SDL_Renderer *renderer) {
 
     SDL_RenderPresent(renderer);
 
+    render_game_state(game_state, resources, renderer);
+
+    SDL_RenderPresent(renderer);
+
     EndScreen *end_screen = NULL;
 
-    int frame_count = 0;
+    bool replay = false;
+
+    // Negative 1 so it will wait for input
+    int frame_count = -1;
     bool running = true;
     bool game_over = false;
     SDL_Event event;
 
-    // add a wait for input function here
+    render_game_state(game_state, resources, renderer);
+    SDL_RenderPresent(renderer);
 
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -86,6 +84,17 @@ void game(SDL_Renderer *renderer) {
                     break;
                 case SDL_KEYDOWN:
                     handle_input(&game_state, event.key.keysym.scancode);
+
+                    if (frame_count == -1) {
+                        frame_count = 0;
+
+                        game_state.apple = (Apple *)malloc(sizeof(Apple));
+                        game_state.apple->x = 0;
+                        game_state.apple->y = 0;
+
+                        move_apple(&game_state);
+                    }
+
                     break;
                 case SDL_MOUSEBUTTONUP:
                     if (!game_over) break;
@@ -101,8 +110,8 @@ void game(SDL_Renderer *renderer) {
 
                     if (collide_point(*end_screen->restart_button, mouse_x,
                                       mouse_y)) {
-                        // Create a system for restarting
-                        printf("Restarting...\n");
+                        replay = true;
+                        running = false;
                     }
 
                     break;
@@ -134,12 +143,15 @@ void game(SDL_Renderer *renderer) {
             SDL_RenderPresent(renderer);
         }
 
-        frame_count++;
+        if (frame_count >= 0) frame_count++;
+
         SDL_Delay(10);
     }
 
     free_game_state(game_state);
     free_end_screen(end_screen);
+
+    return replay;
 }
 
 bool is_game_over(GameState game_state) {
@@ -381,6 +393,7 @@ EndScreen *create_end_screen(SDL_Renderer *renderer, GameState game_state) {
 
     sprintf(score_result, "Score: %d", game_state.score);
 
+    // Add a Boarder??
     end_screen->background = (SDL_Rect){
         WINDOW_WIDTH / 2,
         WINDOW_HEIGHT / 2,
@@ -393,11 +406,11 @@ EndScreen *create_end_screen(SDL_Renderer *renderer, GameState game_state) {
 
     end_screen->restart_button =
         create_button(renderer, "Restart",
-                      (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 100, 60});
+                      (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 100, 50});
 
     end_screen->quit_button = create_button(
         renderer, "Quit",
-        (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 75, 75, 60});
+        (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 75, 75, 50});
 
     end_screen->score_text =
         load_text(renderer, score_result, font_large, font_color_large);

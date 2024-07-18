@@ -48,5 +48,5 @@ typedef struct {
     unsigned int score;
 } GameState;
 
-void game(SDL_Renderer *renderer);
+bool game(SDL_Renderer *renderer);
 #endif
