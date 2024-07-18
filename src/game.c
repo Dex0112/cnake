@@ -361,11 +361,13 @@ void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen) {
     render_button(renderer, *end_screen.quit_button);
 }
 
+// There is a bug where you can go the opposit direction by hitting and adjacent
+// direction then before the next tic pressing the opposit of the previous
+// direction
 Direction handle_input(GameState *game_state, SDL_Scancode key) {
     switch (key) {
         case SDL_SCANCODE_UP:
             if (game_state->direction == DOWN) {
-                printf("Deny direction change\n");
                 break;
             }
 
@@ -373,7 +375,6 @@ Direction handle_input(GameState *game_state, SDL_Scancode key) {
             break;
         case SDL_SCANCODE_DOWN:
             if (game_state->direction == UP) {
-                printf("Deny direction change\n");
                 break;
             }
 
@@ -381,15 +382,13 @@ Direction handle_input(GameState *game_state, SDL_Scancode key) {
             break;
         case SDL_SCANCODE_LEFT:
             if (game_state->direction == RIGHT) {
-                printf("Deny direction change\n");
                 break;
             }
 
-            return LEFT;
+            game_state->direction = LEFT;
             break;
         case SDL_SCANCODE_RIGHT:
             if (game_state->direction == LEFT) {
-                printf("Deny direction change\n");
                 break;
             }
 
