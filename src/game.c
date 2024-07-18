@@ -1,78 +1,205 @@
 #include "game.h"
 
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_mouse.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_scancode.h>
+#include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_timer.h>
+#include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
-#include "entity.h"
+#include "button.h"
+#include "constants.h"
+#include "font.h"
 
-#define VECTOR_UP \
-    (Vector) { 0, -1 }
-#define VECTOR_LEFT \
-    (Vector) { -1, 0 }
-#define VECTOR_RIGHT \
-    (Vector) { 1, 0 }
-#define VECTOR_DOWN \
-    (Vector) { 0, 1 }
-#define VECTOR_ZERO \
-    (Vector) { 0, 0 }
+bool is_game_over(GameState game_state);
+bool is_in_bounds(int x, int y, GameState game_state);
+bool collides_with_snake(int x, int y, SnakeNode *head);
 
-typedef struct node {
-    Entity *self;
-    struct node *next;
-} SnakeNode;
+void tick(GameState *);
+void move_apple(GameState *);
+void append(SnakeNode *head);
 
-// keep score/length?
-// Scale?
-typedef struct {
-    unsigned int grid_width;
-    unsigned grid_height;
-    // Maybe implement
-    // bool screen_wrap;
-    Vector current_dir;
-    SnakeNode *snake_head;
-    Entity *apple;
-    SDL_Renderer *renderer;
-} GameState;
+void handle_input(GameState *, SDL_Scancode);
 
-// Append
-// tick
+EndScreen *create_end_screen(SDL_Renderer *, GameState);
 
-void append(SnakeNode *head, SDL_Renderer *renderer) {
-    SnakeNode *current = head;
+void render_game_state(GameState, Resources, SDL_Renderer *);
+void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen);
 
-    while (current->next != NULL) {
-        current = current->next;
+void free_resources(Resources *);
+void free_game_state(GameState);
+void free_end_screen(EndScreen *end_screen);
+
+bool game(SDL_Renderer *renderer) {
+    Resources resources = {
+        IMG_LoadTexture(renderer, "./gfx/Snake_Head.png"),
+        IMG_LoadTexture(renderer, "./gfx/Snake_Body.png"),
+        IMG_LoadTexture(renderer, "./gfx/Apple.png"),
+    };
+
+    GameState game_state = {
+        GRID_WIDTH, GRID_HEIGHT, (SnakeNode *)malloc(sizeof(SnakeNode)),
+        NULL,       UP,          0,
+    };
+
+    game_state.snake->x = game_state.width / 2 - 1;
+    game_state.snake->y = game_state.height / 2 - 1;
+    game_state.snake->next = NULL;
+
+    SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
+    SDL_RenderClear(renderer);
+
+    render_game_state(game_state, resources, renderer);
+
+    SDL_RenderPresent(renderer);
+
+    render_game_state(game_state, resources, renderer);
+
+    SDL_RenderPresent(renderer);
+
+    EndScreen *end_screen = NULL;
+
+    bool replay = false;
+
+    // Negative 1 so it will wait for input
+    int frame_count = -1;
+    bool running = true;
+    bool game_over = false;
+    SDL_Event event;
+
+    SDL_SetRenderDrawColor(renderer, 35, 35, 35, 255);
+    SDL_RenderClear(renderer);
+
+    render_game_state(game_state, resources, renderer);
+
+    SDL_RenderPresent(renderer);
+
+    while (running) {
+        while (SDL_PollEvent(&event)) {
+            switch (event.type) {
+                case SDL_QUIT:
+                    running = false;
+                    break;
+                case SDL_KEYDOWN:
+                    handle_input(&game_state, event.key.keysym.scancode);
+
+                    if (frame_count == -1) {
+                        frame_count = 0;
+
+                        game_state.apple = (Apple *)malloc(sizeof(Apple));
+                        game_state.apple->x = 0;
+                        game_state.apple->y = 0;
+
+                        move_apple(&game_state);
+                    }
+
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    if (!game_over) break;
+
+                    int mouse_x, mouse_y;
+
+                    SDL_GetMouseState(&mouse_x, &mouse_y);
+
+                    if (collide_point(*end_screen->quit_button, mouse_x,
+                                      mouse_y)) {
+                        running = false;
+                    }
+
+                    if (collide_point(*end_screen->restart_button, mouse_x,
+                                      mouse_y)) {
+                        replay = true;
+                        running = false;
+                    }
+
+                    break;
+            }
+        }
+
+        if (frame_count >= TICK_SPEED) {
+            frame_count = 0;
+
+            if (!game_over) {
+                tick(&game_state);
+            }
+
+            game_over = is_game_over(game_state);
+
+            SDL_SetRenderDrawColor(renderer, 35, 35, 35, 255);
+            SDL_RenderClear(renderer);
+
+            render_game_state(game_state, resources, renderer);
+
+            if (game_over) {
+                if (end_screen == NULL) {
+                    end_screen = create_end_screen(renderer, game_state);
+                }
+
+                render_end_screen(renderer, *end_screen);
+            }
+
+            SDL_RenderPresent(renderer);
+        }
+
+        if (frame_count >= 0) frame_count++;
+
+        SDL_Delay(10);
     }
 
-    printf("Found the end of the snake\n");
+    free_resources(&resources);
+    free_game_state(game_state);
+    free_end_screen(end_screen);
 
-    SnakeNode *node = (SnakeNode *)malloc(sizeof(SnakeNode));
-    node->self =
-        create_entity(renderer, "./gfx/Snake_Body.png",
-                      current->self->transform.position, (Vector){72, 72});
-
-    printf("Created Entity\n");
-
-    node->next = NULL;
-
-    current->next = node;
+    return replay;
 }
 
-bool collides_with_snake(SnakeNode *head, Vector position) {
+bool is_game_over(GameState game_state) {
+    SnakeNode *head = game_state.snake;
+
+    if (!is_in_bounds(head->x, head->y, game_state)) {
+        return true;
+    }
+
+    if (collides_with_snake(head->x, head->y, head->next)) {
+        return true;
+    }
+
+    return false;
+}
+
+bool is_in_bounds(int x, int y, GameState game_state) {
+    if (x < 0) {
+        return false;
+    }
+
+    if (y < 0) {
+        return false;
+    }
+
+    if (x >= game_state.width) {
+        return false;
+    }
+
+    if (y >= game_state.height) {
+        return false;
+    }
+
+    return true;
+}
+
+bool collides_with_snake(int x, int y, SnakeNode *head) {
     SnakeNode *current = head;
 
     while (current) {
-        if (current->self->transform.position.x == position.x) {
-            if (current->self->transform.position.y == position.y) {
-                return true;
-            }
+        if (x == current->x && y == current->y) {
+            return true;
         }
 
         current = current->next;
@@ -81,177 +208,257 @@ bool collides_with_snake(SnakeNode *head, Vector position) {
     return false;
 }
 
+void tick(GameState *game_state) {
+    int prev_x = game_state->snake->x;
+    int prev_y = game_state->snake->y;
+
+    switch (game_state->direction) {
+        case UP:
+            game_state->snake->y -= 1;
+            break;
+        case DOWN:
+            game_state->snake->y += 1;
+            break;
+        case LEFT:
+            game_state->snake->x -= 1;
+            break;
+        case RIGHT:
+            game_state->snake->x += 1;
+            break;
+    }
+
+    bool apple_collected = game_state->snake->x == game_state->apple->x &&
+                           game_state->snake->y == game_state->apple->y;
+
+    if (apple_collected) {
+        append(game_state->snake);
+        game_state->score++;
+    }
+
+    SnakeNode *current = game_state->snake->next;
+
+    while (current) {
+        int current_x = current->x;
+        int current_y = current->y;
+
+        current->x = prev_x;
+        current->y = prev_y;
+
+        prev_x = current_x;
+        prev_y = current_y;
+
+        current = current->next;
+    }
+
+    if (apple_collected) {
+        move_apple(game_state);
+    }
+}
+
 void move_apple(GameState *game_state) {
-    game_state->apple->transform.position.x =
-        random() % game_state->grid_width * 72 + 36;
-    game_state->apple->transform.position.y =
-        random() % game_state->grid_height * 72 + 36;
+    int x = random() % game_state->width;
+    int y = random() % game_state->height;
 
-    if (collides_with_snake(game_state->snake_head,
-                            game_state->apple->transform.position)) {
+    if (collides_with_snake(x, y, game_state->snake)) {
         move_apple(game_state);
+        return;
     }
+
+    game_state->apple->x = x;
+    game_state->apple->y = y;
 }
 
-void tick(GameState *game_state, Vector input_dir) {
-    Vector prev_position = game_state->snake_head->self->transform.position;
+void append(SnakeNode *head) {
+    SnakeNode *current = head;
 
-    game_state->snake_head->self->transform.position.x += input_dir.x * 72;
-    game_state->snake_head->self->transform.position.y += input_dir.y * 72;
-
-    bool apple_collected = false;
-
-    if (game_state->snake_head->self->transform.position.x ==
-            game_state->apple->transform.position.x) {
-        if (game_state->snake_head->self->transform.position.y ==
-                game_state->apple->transform.position.y) {
-            apple_collected = true;
-
-            append(game_state->snake_head, game_state->renderer);
-        }
+    while (current->next) {
+        current = current->next;
     }
 
-    SnakeNode *current = game_state->snake_head->next;
+    SnakeNode *node = (SnakeNode *)malloc(sizeof(SnakeNode));
+
+    node->next = NULL;
+    node->x = current->x;
+    node->y = current->y;
+
+    current->next = node;
+}
+
+void render_game_state(GameState game_state, Resources resources,
+                       SDL_Renderer *renderer) {
+    int cell_size_x = WINDOW_WIDTH / game_state.width;
+    int cell_size_y = WINDOW_HEIGHT / game_state.height;
+
+    SDL_Rect head_rect = {
+        game_state.snake->x * cell_size_x,
+        game_state.snake->y * cell_size_y,
+        cell_size_x,
+        cell_size_y,
+    };
+
+    SDL_Point head_center = {head_rect.w / 2, head_rect.h / 2};
+
+    double head_angle;
+
+    switch (game_state.direction) {
+        case UP:
+            head_angle = 0;
+            break;
+        case DOWN:
+            head_angle = 180;
+            break;
+        case LEFT:
+            head_angle = -90;
+            break;
+        case RIGHT:
+            head_angle = 90;
+            break;
+    }
+
+    SDL_RenderCopyEx(renderer, resources.snake_head, NULL, &head_rect,
+                     head_angle, &head_center, SDL_FLIP_NONE);
+
+    SnakeNode *current = game_state.snake->next;
 
     while (current != NULL) {
-        Vector current_position = current->self->transform.position;
+        SDL_Rect body_rect = {
+            current->x * cell_size_x,
+            current->y * cell_size_y,
+            cell_size_x,
+            cell_size_y,
+        };
 
-        current->self->transform.position = prev_position;
-        prev_position = current_position;
+        SDL_RenderCopy(renderer, resources.snake_body, NULL, &body_rect);
 
         current = current->next;
     }
 
-    if(apple_collected) {
-        move_apple(game_state);
+    if (game_state.apple == NULL) {
+        return;
     }
+
+    SDL_Rect apple_rect = {
+        game_state.apple->x * cell_size_x,
+        game_state.apple->y * cell_size_y,
+        cell_size_x,
+        cell_size_y,
+    };
+
+    SDL_RenderCopy(renderer, resources.apple, NULL, &apple_rect);
 }
 
-void render_game_state(GameState *game_state) {
-    // Maybe render grid lines
-    // Render Snake
-
-    // When I refactor instead of storing the texture in each node just render
-    // the head as the snake head then loop through rendering the same body
-    // texture over and over again
-    SnakeNode *current = game_state->snake_head;
-
-    while (current != NULL) {
-        render_entity(game_state->renderer, current->self);
-
-        current = current->next;
-    }
-
-    if (game_state->apple) {
-        render_entity(game_state->renderer, game_state->apple);
-    }
-}
-
-// Return scene state enum or scene trasition thing
-void game(SDL_Renderer *renderer) {
-    // Window Width and Height 720
-
-    // This should only be called once so I need to put this in main or
-    // something
-    srandom(time(NULL));
-
-    GameState game_state = {10,        10,
-                            VECTOR_UP, (SnakeNode *)malloc(sizeof(SnakeNode)),
-                            NULL,      renderer};
-
-    // Find a way to center the snake
-    game_state.snake_head->self = create_entity(
-        renderer, "./gfx/Snake_Head.png", (Vector){36, 36}, (Vector){72, 72});
-
-    game_state.snake_head->next = NULL;
-
-    SDL_Event event;
-    bool running = true;
-    Vector current_dir = VECTOR_ZERO;
-
-    int frame_count = -1;
-    int tick_speed = 25;
-
-    // Render Game State
+void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen) {
     SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-    SDL_RenderClear(renderer);
-    render_game_state(&game_state);
-    SDL_RenderPresent(renderer);
+    SDL_RenderFillRect(renderer, &end_screen.background);
 
-    // Draw grid lines
-    while (running) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = false;
-                printf("Quiting\n");
-            } else if (event.type == SDL_KEYDOWN) {
-                // Parse input function?
-                // Like parse_input(input, &current_dir)
-                // Add edge detection/screen wrap
-                if (event.key.keysym.scancode == SDL_SCANCODE_LEFT) {
-                    if (current_dir.x != VECTOR_LEFT.x * -1 ||
-                        current_dir.y != VECTOR_LEFT.y * -1) {
-                        current_dir = VECTOR_LEFT;
-                    }
+    SDL_RenderCopy(renderer, end_screen.score_text, NULL,
+                   &end_screen.score_rect);
 
-                } else if (event.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
-                    if (current_dir.x != VECTOR_RIGHT.x * -1 ||
-                        current_dir.y != VECTOR_RIGHT.y * -1) {
-                        current_dir = VECTOR_RIGHT;
-                    }
-                } else if (event.key.keysym.scancode == SDL_SCANCODE_UP) {
-                    if (current_dir.x != VECTOR_UP.x * -1 ||
-                        current_dir.y != VECTOR_UP.y * -1) {
-                        current_dir = VECTOR_UP;
-                    }
-                } else if (event.key.keysym.scancode == SDL_SCANCODE_DOWN) {
-                    if (current_dir.x != VECTOR_DOWN.x * -1 ||
-                        current_dir.y != VECTOR_DOWN.y * -1) {
-                        current_dir = VECTOR_DOWN;
-                    }
-                }
+    render_button(renderer, *end_screen.restart_button);
+    render_button(renderer, *end_screen.quit_button);
+}
 
-                if (frame_count < 0) {
-                    if (current_dir.x == VECTOR_ZERO.x &&
-                        current_dir.y == VECTOR_ZERO.y) {
-                        continue;
-                    }
-
-                    frame_count = 1;
-
-                    game_state.apple =
-                        create_entity(renderer, "./gfx/Apple.png",
-                                      (Vector){0, 0}, (Vector){72, 72});
-
-                    printf("Moving Apple\n");
-                    move_apple(&game_state);
-                }
-            }
-        }
-
-        if (frame_count == 0) {
-            tick(&game_state, current_dir);
-
-            if (collides_with_snake(
-                    game_state.snake_head->next,
-                    game_state.snake_head->self->transform.position)) {
-                printf("You lose!\n");
-                // game over flag?
-                // Handle everything better
-                frame_count = -1;
+void handle_input(GameState *game_state, SDL_Scancode key) {
+    switch (key) {
+        case SDL_SCANCODE_UP:
+            if (game_state->direction == DOWN) {
+                break;
             }
 
-            // Render Game State
-            SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
-            SDL_RenderClear(renderer);
-            render_game_state(&game_state);
-            SDL_RenderPresent(renderer);
-        }
+            game_state->direction = UP;
+            break;
+        case SDL_SCANCODE_DOWN:
+            if (game_state->direction == UP) {
+                break;
+            }
 
-        if (frame_count >= 0) {
-            frame_count = (frame_count + 1) % tick_speed;
-        }
+            game_state->direction = DOWN;
+            break;
+        case SDL_SCANCODE_LEFT:
+            if (game_state->direction == RIGHT) {
+                break;
+            }
 
-        SDL_Delay(20);
+            game_state->direction = LEFT;
+            break;
+        case SDL_SCANCODE_RIGHT:
+            if (game_state->direction == LEFT) {
+                break;
+            }
+
+            game_state->direction = RIGHT;
+            break;
+        default:
+            break;
     }
+}
+
+EndScreen *create_end_screen(SDL_Renderer *renderer, GameState game_state) {
+    EndScreen *end_screen = (EndScreen *)malloc(sizeof(EndScreen));
+
+    char score_result[25];
+
+    sprintf(score_result, "Score: %d", game_state.score);
+
+    // Add a Boarder??
+    end_screen->background = (SDL_Rect){
+        WINDOW_WIDTH / 2,
+        WINDOW_HEIGHT / 2,
+        WINDOW_WIDTH * 0.75,
+        WINDOW_HEIGHT * 0.75,
+    };
+
+    end_screen->background.x -= end_screen->background.w / 2;
+    end_screen->background.y -= end_screen->background.h / 2;
+
+    end_screen->restart_button =
+        create_button(renderer, "Restart",
+                      (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 100, 50});
+
+    end_screen->quit_button = create_button(
+        renderer, "Quit",
+        (SDL_Rect){WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2 + 75, 75, 50});
+
+    end_screen->score_text =
+        load_text(renderer, score_result, font_large, font_color_large);
+
+    SDL_QueryTexture(end_screen->score_text, NULL, NULL,
+                     &(end_screen->score_rect.w), &(end_screen->score_rect.h));
+
+    end_screen->score_rect.x = WINDOW_WIDTH / 2;
+    end_screen->score_rect.x -= end_screen->score_rect.w / 2;
+
+    end_screen->score_rect.y = WINDOW_HEIGHT / 2 - 75;
+    end_screen->score_rect.y -= end_screen->score_rect.h / 2;
+
+    return end_screen;
+}
+
+void free_resources(Resources *resources) {
+    SDL_DestroyTexture(resources->apple);
+    SDL_DestroyTexture(resources->snake_head);
+    SDL_DestroyTexture(resources->snake_body);
+}
+
+void free_game_state(GameState game_state) {
+    SnakeNode *current = game_state.snake;
+
+    while (current) {
+        SnakeNode *next = current->next;
+
+        free(current);
+
+        current = next;
+    }
+
+    free(game_state.apple);
+}
+
+void free_end_screen(EndScreen *end_screen) {
+    if (end_screen == NULL) return;
+
+    SDL_DestroyTexture(end_screen->score_text);
+
+    free_button(end_screen->restart_button);
+    free_button(end_screen->quit_button);
 }
