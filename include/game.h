@@ -8,8 +8,8 @@
 
 #include "button.h"
 
-#define GRID_WIDTH 10
-#define GRID_HEIGHT 10
+#define GRID_WIDTH 20
+#define GRID_HEIGHT 20
 #define TICK_SPEED 25
 
 typedef enum { UP, LEFT, DOWN, RIGHT } Direction;

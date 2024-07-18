@@ -34,6 +34,8 @@ int main() {
     SDL_Renderer *renderer =
         SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+
     load_font_regular("/usr/share/fonts/gnu-free/FreeSansBold.otf", 24);
     load_font_large("/usr/share/fonts/gnu-free/FreeSansBold.otf", 40);
 

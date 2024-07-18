@@ -52,5 +52,4 @@ void render_button(SDL_Renderer *renderer, Button button) {
 
 void free_button(Button *button) {
     SDL_DestroyTexture(button->text_texture);
-    free(button);
 }

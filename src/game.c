@@ -33,6 +33,7 @@ EndScreen *create_end_screen(SDL_Renderer *, GameState);
 void render_game_state(GameState, Resources, SDL_Renderer *);
 void render_end_screen(SDL_Renderer *renderer, EndScreen end_screen);
 
+void free_resources(Resources *);
 void free_game_state(GameState);
 void free_end_screen(EndScreen *end_screen);
 
@@ -48,8 +49,8 @@ bool game(SDL_Renderer *renderer) {
         NULL,       UP,          0,
     };
 
-    game_state.snake->x = game_state.width / 2;
-    game_state.snake->y = game_state.height / 2;
+    game_state.snake->x = game_state.width / 2 - 1;
+    game_state.snake->y = game_state.height / 2 - 1;
     game_state.snake->next = NULL;
 
     SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
@@ -73,7 +74,11 @@ bool game(SDL_Renderer *renderer) {
     bool game_over = false;
     SDL_Event event;
 
+    SDL_SetRenderDrawColor(renderer, 35, 35, 35, 255);
+    SDL_RenderClear(renderer);
+
     render_game_state(game_state, resources, renderer);
+
     SDL_RenderPresent(renderer);
 
     while (running) {
@@ -127,7 +132,7 @@ bool game(SDL_Renderer *renderer) {
 
             game_over = is_game_over(game_state);
 
-            SDL_SetRenderDrawColor(renderer, 144, 144, 144, 255);
+            SDL_SetRenderDrawColor(renderer, 35, 35, 35, 255);
             SDL_RenderClear(renderer);
 
             render_game_state(game_state, resources, renderer);
@@ -148,6 +153,7 @@ bool game(SDL_Renderer *renderer) {
         SDL_Delay(10);
     }
 
+    free_resources(&resources);
     free_game_state(game_state);
     free_end_screen(end_screen);
 
@@ -226,6 +232,7 @@ void tick(GameState *game_state) {
 
     if (apple_collected) {
         append(game_state->snake);
+        game_state->score++;
     }
 
     SnakeNode *current = game_state->snake->next;
@@ -427,6 +434,12 @@ EndScreen *create_end_screen(SDL_Renderer *renderer, GameState game_state) {
     return end_screen;
 }
 
+void free_resources(Resources *resources) {
+    SDL_DestroyTexture(resources->apple);
+    SDL_DestroyTexture(resources->snake_head);
+    SDL_DestroyTexture(resources->snake_body);
+}
+
 void free_game_state(GameState game_state) {
     SnakeNode *current = game_state.snake;
 
@@ -448,6 +461,4 @@ void free_end_screen(EndScreen *end_screen) {
 
     free_button(end_screen->restart_button);
     free_button(end_screen->quit_button);
-
-    free(end_screen);
 }

@@ -7,14 +7,18 @@ BIN_DIR = bin
 TARGET = $(BIN_DIR)/run
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+DEPS = $(OBJS:.o=.d)
 
 # Build the main executable
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(LIBS)
 
-# Compile source files
+# Compile source files and generate dependencies
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(CC) -MMD -c $< -o $@ $(CFLAGS)
+
+# Include dependencies
+-include $(DEPS)
 
 # Create necessary directories
 $(OBJ_DIR):
